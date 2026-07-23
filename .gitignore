@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Logs
+logs/
+*.log
+
+# Environment files (NEVER commit secrets)
+.env
+.env.local
+.env.development.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Claude Code 個人本機設定（settings.json 進版控，local 不進）
+.claude/settings.local.json
+
+# Coverage
+coverage/
+.nyc_output/
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Vite
+.vite/
+
+# Code review reports
+pr/
+
+openspec/assets/
+
+/upload/
+
+/storage/
