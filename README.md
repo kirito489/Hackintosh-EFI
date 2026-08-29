@@ -45,6 +45,7 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 - **Bootloader**: OpenCore **1.0.7**
 - **SMBIOS**: `iMac20,1`
 - **boot-args**: `keepsyms=1 agdpmod=pikera rtcfx_exclude=0E-FF brcmfx-country=US`
+- **`Misc > Security > AllowSetDefault`**: `true` — 雙系統必開，OpenCore 選單按 **Ctrl+Enter** 可設定預設開機項目（搭配 `Timeout=0` 才不用每次手選）
 
 ### Kexts
 
@@ -58,7 +59,7 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 | RTCMemoryFixup | 修關機跳 F1 + 時間 |
 | AirportBrcmFixup (+ AirPortBrcmNIC_Injector) | WiFi |
 | ~~BlueToolFixup~~ | ⚠️ **已停用** — 正牌 Broadcom 卡裝了它反而會壞（見踩雷筆記） |
-| BrcmFirmwareData + BrcmPatchRAM3 | 保留但**對本卡未作用**（PID `0a5c:21ff` 不在支援清單） |
+| ~~BrcmFirmwareData + BrcmPatchRAM3~~ | ⚠️ **已停用** — 對本卡從不載入（PID `0a5c:21ff` 不在 `BrcmPatchRAM3` 支援清單），留著只是白佔核心記憶體 |
 | NVMeFix | NVMe 電源管理 |
 | RestrictEvents | 修正 CPU 名稱顯示 |
 | FeatureUnlock | 解鎖 Sidecar / 隔空 / 接續互通 |
