@@ -48,6 +48,8 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 - **boot-args**: `keepsyms=1 agdpmod=pikera rtcfx_exclude=0E-FF brcmfx-country=US`
 - **`Misc > Security > AllowSetDefault`**: `true` — 雙系統必開，OpenCore 選單按 **Ctrl+Enter** 把游標所在項目設為預設
 - **`Misc > Boot > Timeout`**: `10` — 開機選單倒數 10 秒後自動進入預設項目；期間按任意鍵即停止倒數，可手動選擇
+- **`Misc > Boot > PollAppleHotKeys`**: `true` — 開機時 `⌘R`（Recovery）、`⌘V`（verbose）、`⌘S` 等熱鍵才會生效
+- **`Misc > Debug > ApplePanic`**: `true` — 核心崩潰時把 panic log 寫到 EFI 分割區，出事時是唯一線索
 
 ### Kexts
 
@@ -77,7 +79,19 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 
 ### UEFI Drivers
 
-`OpenRuntime` · `OpenCanopy`(圖形選單) · `OpenHfsPlus` · `OpenUsbKbDxe`
+| Driver | 用途 |
+|---|---|
+| `OpenRuntime` | 必要 |
+| `OpenCanopy` | 圖形開機選單 |
+| `OpenHfsPlus` | 讀 HFS+ 分割區 |
+| `OpenUsbKbDxe` | 選單中的 USB 鍵盤 |
+| `OpenNtfsDxe` | 讀 NTFS 分割區（Windows 雙系統） |
+| `ResetNvramEntry` | 選單多一個 **Reset NVRAM** 項目，不必開終端機打指令 |
+| `FirmwareSettingsEntry` | 選單多一個 **Reboot to BIOS**，不用狂按 `Del` |
+| `ToggleSipEntry` | 選單直接切換 SIP（升 Sonoma+ 時會用到） |
+| `CrScreenshotDxe` | 在選單按 `F10` 截圖 |
+
+> 這些項目是 **auxiliary**（`HideAuxiliary=true`），開機選單按 **空白鍵**才會顯示。
 
 ---
 
