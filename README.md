@@ -36,6 +36,7 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 | 有線網路 (I225-V) | ✅ | AppleIGC |
 | 時間(雙系統不跑掉) | ✅ | 見下方踩雷筆記 |
 | AirDrop / 接續互通 | ✅ | 需登入 iCloud |
+| 睡眠 | ⚠️ | 睡得著也喚得醒，但無法維持深層睡眠（見踩雷筆記）|
 | 關機(不跳 BIOS 安全模式) | ✅ | RTCMemoryFixup |
 
 ---
@@ -70,6 +71,7 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 - `SSDT-EC-USBX-DESKTOP` — 假 EC 裝置 + USB 供電
 - `SSDT-PLUG-DRTNIA` — CPU 原生電源管理
 - `SSDT-AWAC` — 關 AWAC、改用 legacy RTC
+- `SSDT-DISABLE-XDCI` — 停用 XDCI，消除假喚醒（見踩雷筆記）
 
 ### UEFI Drivers
 
@@ -99,6 +101,15 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
   修法：`config.plist` 的 `Kernel > Add` 把 `BlueToolFixup.kext` 設 `Enabled=false`，重開機即恢復。
   走過的死路（別再走一次）：NVRAM `bluetoothInternalControllerInfo` 快取、`pkill bluetoothd` / `ControllerPowerState`、板載 Genesys USB hub 枚舉延遲 —— 全都不是原因。
 - **AirDrop 找不到自己的 iPhone**：先確認 Mac 沒有連著**那支手機的個人熱點**。iPhone 開熱點時 Wi-Fi 進入 AP 模式，無法同時做 AWDL 點對點。用 `ipconfig getifaddr en1` 檢查，開頭是 `172.20.10.x` 就是連到熱點了。（手機和路由器同名時特別容易中招。）
+- **🔥 睡下去十幾秒就自己醒（假喚醒）→ 停用 `XDCI`**：`pmset -g log` 若看到大量 `DarkWake ... due to XDCI/`，元兇是 `_SB.PC00.XDCI`（Intel PCH USB Device Controller / OTG，PCI `00:14.1`）。桌機不會把自己當 USB 周邊，這控制器毫無用途，但它的 `_PRW` 回傳 `GPRW(0x6D, 0x04)` 會在 S3 觸發喚醒。本機累計超過 200 次。
+  修法：用 `SSDT-DISABLE-XDCI.aml` 幫它加一個回傳 0 的 `_STA`。原始 DSDT 中 XDCI **沒有** `_STA`（只有 `_ADR`/`_S0W`/`_PRW`/`_DSW`/`_DSM`），所以直接新增不會撞名，**不需要任何 ACPI rename patch**。注意路徑是 `PC00` 不是 `PCI0`。
+  ⚠️ **不要改用 `SSDT-GPRW`**：GPE `0x6D` 由 `GLAN`/`XHCI`/`XDCI`/`HDAS`/`CNVW` 共用，動 `GPRW` 會連帶關掉 USB 與網路喚醒，鍵盤滑鼠將無法喚醒電腦。
+  B560-F 的 BIOS **沒有** XDCI 的開關選項，只能走 SSDT。取得 DSDT 的方法：OpenCore RELEASE 版不支援 `SysReport`，改用 **MaciASL** → `File → New from ACPI → DSDT`，再用 ⌘A ⌘C 複製、`pbpaste` 存檔（直接存 `.aml` 會因重新編譯失敗）。
+- **⚠️ 已知問題：仍無法維持深層睡眠**：修掉 XDCI 之後，仍有固定節奏的 `DarkWake ... due to XHCI HDAS CNVW/Network`（約每 27 秒一次，螢幕不亮），以及約 2 分鐘後一次歸因為 `HID Activity` 的 FullWake（螢幕會亮）。
+  已排除：`XDCI`、Power Nap、`womp`(Wake on LAN)、`proximitywake`、實體鍵盤滑鼠（拔線仍會醒）、`AURA LED Controller`（無喚醒斷言）。
+  未驗證的剩餘嫌疑：**藍牙遠端喚醒** —— 有 5 個配對裝置，`RemoteWakeEnabled` 預設為允許，未連線的配對裝置仍可主動喚醒 Mac。要測就跑
+  `sudo defaults write /Library/Preferences/com.apple.Bluetooth RemoteWakeEnabled -int 0`（代價是藍牙鍵鼠無法喚醒電腦）。
+  影響評估：機器**睡得著、喚得醒、資料安全**，只是待機耗電偏高。屬品質問題非故障。
 - **關機後開機跳 BIOS 安全模式 (F1)**:macOS 的 AppleRTC 亂寫 CMOS,弄壞 ASUS BIOS 校驗值。用 **RTCMemoryFixup** + boot-arg `rtcfx_exclude`。
 - **時間卡在 1999 / 每次開機跑掉**:`rtcfx_exclude=00-FF`(全鎖)會連時間都不讓寫 → 縮成 **`rtcfx_exclude=0E-FF`**(只鎖 BIOS 校驗區、放行時間區 0x00–0x0D)+ macOS 開自動對時。雙系統時間打架另需在 Windows 設 `RealTimeIsUniversal=1`。
 - **OpenCore 選單鍵盤沒反應**:很可能是 **Timeout 太短**(選單自己倒數跑掉)。設 `Timeout=0` 讓它停著等你選。
