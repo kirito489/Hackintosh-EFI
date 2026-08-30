@@ -46,7 +46,8 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 - **Bootloader**: OpenCore **1.0.7**
 - **SMBIOS**: `iMac20,1`
 - **boot-args**: `keepsyms=1 agdpmod=pikera rtcfx_exclude=0E-FF brcmfx-country=US`
-- **`Misc > Security > AllowSetDefault`**: `true` — 雙系統必開，OpenCore 選單按 **Ctrl+Enter** 可設定預設開機項目（搭配 `Timeout=0` 才不用每次手選）
+- **`Misc > Security > AllowSetDefault`**: `true` — 雙系統必開，OpenCore 選單按 **Ctrl+Enter** 把游標所在項目設為預設
+- **`Misc > Boot > Timeout`**: `5` — 開機選單倒數 5 秒後自動進入預設項目；期間按任意鍵即停止倒數，可手動選擇
 
 ### Kexts
 
@@ -72,6 +73,7 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 - `SSDT-PLUG-DRTNIA` — CPU 原生電源管理
 - `SSDT-AWAC` — 關 AWAC、改用 legacy RTC
 - `SSDT-DISABLE-XDCI` — 停用 XDCI，消除假喚醒（見踩雷筆記）
+- `SSDT-DISABLE-CNVW` — 停用主機板內建 Intel CNVi Wi-Fi（macOS 不支援，留著也只是多一個喚醒源）
 
 ### UEFI Drivers
 
@@ -96,6 +98,16 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 ## 🕳 踩雷筆記(給後人參考)
 
 - **WiFi 卡別買錯**：主機板內建 Intel AX (CNVi) macOS 完全不支援。要買 **Broadcom BCM94360 系列**（原生）。
+- **🔥 雙系統下寫停用裝置的 SSDT，一定要包 `_OSI("Darwin")`**：Windows 若也是透過 OpenCore 選單開機，**OpenCore 的 ACPI 修改會套用到之後載入的任何作業系統** —— 沒加判斷的話，你在 macOS 停掉的裝置在 Windows 也會消失。正確寫法：
+  ```asl
+  Method (_STA, 0, NotSerialized)
+  {
+      If (_OSI ("Darwin")) { Return (Zero) }   // macOS：隱藏
+      Else                 { Return (0x0F) }   // 其他 OS：正常存在
+  }
+  ```
+- **主機板內建的 Intel AX (CNVi) 建議直接用 SSDT 停掉**：macOS 沒有任何驅動會用它，但它的 ACPI 裝置 `_SB.PC00.CNVW` 仍掛在 GPE `0x6D` 上、`_PRW` 回傳 `GPRW(0x6D, 0x04)`，是假喚醒的候選來源。作法同 XDCI：裝置層沒有 `_STA`（出現的那個屬於巢狀 `PowerResource (WRST)`），直接用 `SSDT-DISABLE-CNVW.aml` 新增回傳 0 的 `_STA` 即可。
+  ⚠️ 別搞混：PCIe 插槽上的 Broadcom 卡走 `RP##` → `PXSX`，與 `CNVW`（`00:14.3`）無關，停用 CNVW 不影響 Wi-Fi/藍牙。
 - **⚠️ 不要用 `BCM_4350C2` 判斷是不是假卡（這條我踩過，浪費一整晚）**：`system_profiler SPBluetoothDataType` 顯示 `BCM_4350C2`（USB 名稱 `BCM2045A0`）**只代表韌體還沒上傳**，不代表買到假貨。正牌卡韌體上傳成功後會變 `BCM_20703A1`，且藍牙位址 = **Wi-Fi MAC +1**（本機 Wi-Fi `ac:bc:32:87:1f:03` → 藍牙 `AC:BC:32:87:1F:04`），這才是可靠的驗證方式。
 - **🔥 藍牙身分錯亂 / AirDrop 不通 → 停用 `BlueToolFixup`**：`BlueToolFixup` 是給**非 Apple** 藍牙用的相容層。**正牌 Broadcom 卡裝了它，原生驅動路徑會被攔截**，macOS 改走第三方通用流程 → `Chipset: THIRD_PARTY_DONGLE`、每次開機**亂數產生**藍牙位址、假韌體版本 `v8453 c4096`。一般配對還能用，但 **Continuity 會驗證藍牙與 Wi-Fi 位址的配對關係，位址是亂數就直接拒絕 → AirDrop 掛掉**。
   修法：`config.plist` 的 `Kernel > Add` 把 `BlueToolFixup.kext` 設 `Enabled=false`，重開機即恢復。
@@ -112,7 +124,8 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
   影響評估：機器**睡得著、喚得醒、資料安全**，只是待機耗電偏高。屬品質問題非故障。
 - **關機後開機跳 BIOS 安全模式 (F1)**:macOS 的 AppleRTC 亂寫 CMOS,弄壞 ASUS BIOS 校驗值。用 **RTCMemoryFixup** + boot-arg `rtcfx_exclude`。
 - **時間卡在 1999 / 每次開機跑掉**:`rtcfx_exclude=00-FF`(全鎖)會連時間都不讓寫 → 縮成 **`rtcfx_exclude=0E-FF`**(只鎖 BIOS 校驗區、放行時間區 0x00–0x0D)+ macOS 開自動對時。雙系統時間打架另需在 Windows 設 `RealTimeIsUniversal=1`。
-- **OpenCore 選單鍵盤沒反應**:很可能是 **Timeout 太短**(選單自己倒數跑掉)。設 `Timeout=0` 讓它停著等你選。
+- **OpenCore 選單鍵盤沒反應**：很可能是 **Timeout 太短**（選單自己倒數跑掉）。除錯期間先設 `Timeout=0` 讓它停著等你選；
+  確認鍵盤可用後（需 `OpenUsbKbDxe.efi`），再改成 `Timeout=5` + `AllowSetDefault=true`，用 **Ctrl+Enter** 設定預設項目，之後開機倒數 5 秒自動進入，按任意鍵可中斷倒數。
 - **裝好後拔 USB 卻進 Windows**:OpenCore 只在 USB 上時,要把 EFI 複製到 macOS 碟的 EFI 分割區,再把 BIOS 開機順序設成該碟。
 - **OpenCanopy 圖形選單空白**:`Resources/` 資料夾要有素材(從 [OcBinaryData](https://github.com/acidanthera/OcBinaryData) 拿 Font / Image / Label)。
 

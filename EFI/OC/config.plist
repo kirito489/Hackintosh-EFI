@@ -150,6 +150,14 @@
 				<key>Path</key>
 				<string>SSDT-DISABLE-XDCI.aml</string>
 			</dict>
+			<dict>
+				<key>Comment</key>
+				<string>Disable CNVW (onboard Intel CNVi WiFi, unsupported by macOS)</string>
+				<key>Enabled</key>
+				<true/>
+				<key>Path</key>
+				<string>SSDT-DISABLE-CNVW.aml</string>
+			</dict>
 		</array>
 		<key>Delete</key>
 		<array>
@@ -1495,7 +1503,7 @@
 			<key>TakeoffDelay</key>
 			<integer>0</integer>
 			<key>Timeout</key>
-			<integer>0</integer>
+			<integer>5</integer>
 		</dict>
 		<key>Debug</key>
 		<dict>
