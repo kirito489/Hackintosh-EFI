@@ -47,7 +47,7 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 - **SMBIOS**: `iMac20,1`
 - **boot-args**: `keepsyms=1 agdpmod=pikera rtcfx_exclude=0E-FF brcmfx-country=US`
 - **`Misc > Security > AllowSetDefault`**: `true` — 雙系統必開，OpenCore 選單按 **Ctrl+Enter** 把游標所在項目設為預設
-- **`Misc > Boot > Timeout`**: `5` — 開機選單倒數 5 秒後自動進入預設項目；期間按任意鍵即停止倒數，可手動選擇
+- **`Misc > Boot > Timeout`**: `10` — 開機選單倒數 10 秒後自動進入預設項目；期間按任意鍵即停止倒數，可手動選擇
 
 ### Kexts
 
@@ -125,7 +125,7 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 - **關機後開機跳 BIOS 安全模式 (F1)**:macOS 的 AppleRTC 亂寫 CMOS,弄壞 ASUS BIOS 校驗值。用 **RTCMemoryFixup** + boot-arg `rtcfx_exclude`。
 - **時間卡在 1999 / 每次開機跑掉**:`rtcfx_exclude=00-FF`(全鎖)會連時間都不讓寫 → 縮成 **`rtcfx_exclude=0E-FF`**(只鎖 BIOS 校驗區、放行時間區 0x00–0x0D)+ macOS 開自動對時。雙系統時間打架另需在 Windows 設 `RealTimeIsUniversal=1`。
 - **OpenCore 選單鍵盤沒反應**：很可能是 **Timeout 太短**（選單自己倒數跑掉）。除錯期間先設 `Timeout=0` 讓它停著等你選；
-  確認鍵盤可用後（需 `OpenUsbKbDxe.efi`），再改成 `Timeout=5` + `AllowSetDefault=true`，用 **Ctrl+Enter** 設定預設項目，之後開機倒數 5 秒自動進入，按任意鍵可中斷倒數。
+  確認鍵盤可用後（需 `OpenUsbKbDxe.efi`），再改成 `Timeout=10` + `AllowSetDefault=true`，用 **Ctrl+Enter** 設定預設項目，之後開機倒數 10 秒自動進入，按任意鍵可中斷倒數。
 - **裝好後拔 USB 卻進 Windows**:OpenCore 只在 USB 上時,要把 EFI 複製到 macOS 碟的 EFI 分割區,再把 BIOS 開機順序設成該碟。
 - **OpenCanopy 圖形選單空白**:`Resources/` 資料夾要有素材(從 [OcBinaryData](https://github.com/acidanthera/OcBinaryData) 拿 Font / Image / Label)。
 
