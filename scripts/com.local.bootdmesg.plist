@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.local.bootdmesg</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/bin/sh</string>
+		<string>-c</string>
+		<string>/sbin/dmesg &gt; /var/tmp/bootdmesg.txt 2&gt;&amp;1; /usr/sbin/sysctl kern.boottime &gt;&gt; /var/tmp/bootdmesg.txt</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>KeepAlive</key>
+	<false/>
+	<key>StandardErrorPath</key>
+	<string>/var/tmp/bootdmesg.err</string>
+</dict>
+</plist>

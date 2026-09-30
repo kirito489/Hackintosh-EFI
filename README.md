@@ -31,11 +31,11 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 | 硬碟開機(免 USB / 免 F8) | ✅ | BIOS 開機順序設 WD Blue 第一 |
 | 顯卡加速 (RX 6800XT) | ✅ | WhateverGreen + `agdpmod=pikera` |
 | WiFi | ✅ | Broadcom 原生 |
-| 藍牙 | ❌ | 韌體未上傳（`v0 c0` / `Address: NULL`），每次關機就掉韌體；排查見 [藍牙韌體排查](藍牙韌體排查.md) |
+| 藍牙 | ✅ | 需 `com.local.btwake` 開機自動補一次睡眠喚醒（韌體每次關機就掉），見 [藍牙韌體排查](藍牙韌體排查.md) |
 | 音效 (HDMI) | ✅ | |
 | 有線網路 (I225-V) | ✅ | AppleIGC |
 | 時間(雙系統不跑掉) | ✅ | 見下方踩雷筆記 |
-| AirDrop / 接續互通 | ⚠️ | 需登入 iCloud；Continuity 要驗證藍牙位址，藍牙故障時連帶不通 |
+| AirDrop / 接續互通 | ✅ | 需登入 iCloud；藍牙位址 = Wi-Fi MAC +1，Continuity 的配對關係成立 |
 | 睡眠 | ⚠️ | 睡得著也喚得醒，但無法維持深層睡眠（見踩雷筆記）|
 | 關機(不跳 BIOS 安全模式) | ✅ | RTCMemoryFixup |
 
@@ -63,7 +63,7 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
 | RTCMemoryFixup | 修關機跳 F1 + 時間 |
 | AirportBrcmFixup (+ AirPortBrcmNIC_Injector) | WiFi |
 | BlueToolFixup | 藍牙相容層 — macOS 12+ **必須**；停用只對「身分錯亂」那個故障有效（見踩雷筆記） |
-| BrcmFirmwareData + BrcmPatchRAM3 | 藍牙韌體上傳 — 需手動補 `0a5c_21ff` personality；**目前仍未成功上傳**（見 [排查紀錄](藍牙韌體排查.md)） |
+| BrcmFirmwareData + BrcmPatchRAM3 | 藍牙韌體上傳 — 需手動補 `0a5c_21ff` personality；上傳成功但**不會自行 re-enumerate**，靠 btwake 補（見 [排查紀錄](藍牙韌體排查.md)） |
 | NVMeFix | NVMe 電源管理 |
 | RestrictEvents | 修正 CPU 名稱顯示 |
 | FeatureUnlock | 解鎖 Sidecar / 隔空 / 接續互通 |
@@ -128,7 +128,7 @@ macOS **Ventura (13)** + **Windows** 雙系統的 OpenCore EFI。
   走過的死路（針對**這個症狀**別再走一次）：`pkill bluetoothd` / `ControllerPowerState`、板載 Genesys USB hub 枚舉延遲 —— 都不是身分錯亂的原因。⚠️ NVRAM `bluetoothInternalControllerInfo` 也曾被當成死路，但它帶著**有效的藍牙 MAC**，對「韌體未上傳」那個故障未定案，**別隨手刪掉**。
 - **⚠️ 藍牙有兩種壞法，解法別搞混**：
   - **身分錯亂**（上面那條）：`Chipset: THIRD_PARTY_DONGLE`、亂數位址、假韌體 `v8453 c4096` —— **一般配對還能用**，只有 AirDrop 掛。前提是**韌體已經在卡上**，停用 `BlueToolFixup` 可解。
-  - **韌體未上傳**：`Chipset: BCM_4350C2`、`Firmware v0 c0`、`Address: NULL` —— **完全不能用**，USB 停在 `0a5c:21ff` 不會變成 `05ac:8290`。停用 `BlueToolFixup` 對這個**無效**（只會讓 `Transport` 變 `UART`）。PID `0a5c:21ff` 不在 acidanthera 任何 kext 的 personality 清單裡，得手動補進 `BrcmPatchRAM3.kext` 的 Info.plist；補完仍卡在「match 成功卻靜默不上傳」，**目前未解**。七項已確認正確的設定、六個已排除的假設、log 證據與待跑實驗見 [藍牙韌體排查](藍牙韌體排查.md)。
+  - **韌體未上傳**：`Chipset: BCM_4350C2`、`Firmware v0 c0`、`Address: NULL` —— **完全不能用**，USB 停在 `0a5c:21ff`。**已解決**：BrcmPatchRAM 其實成功寫入韌體，但只發 `HCI_RESET`、這張卡不會自行重新枚舉，所以要補一次 suspend/resume（睡眠喚醒）讓 macOS 重讀 descriptor。`com.local.btwake` LaunchDaemon 已自動處理。完整根因、六個排除掉的假設與觀測方法見 [藍牙韌體排查](藍牙韌體排查.md)。
 - **AirDrop 找不到自己的 iPhone**：先確認 Mac 沒有連著**那支手機的個人熱點**。iPhone 開熱點時 Wi-Fi 進入 AP 模式，無法同時做 AWDL 點對點。用 `ipconfig getifaddr en1` 檢查，開頭是 `172.20.10.x` 就是連到熱點了。（手機和路由器同名時特別容易中招。）
 - **🔥 睡下去十幾秒就自己醒（假喚醒）→ 停用 `XDCI`**：`pmset -g log` 若看到大量 `DarkWake ... due to XDCI/`，元兇是 `_SB.PC00.XDCI`（Intel PCH USB Device Controller / OTG，PCI `00:14.1`）。桌機不會把自己當 USB 周邊，這控制器毫無用途，但它的 `_PRW` 回傳 `GPRW(0x6D, 0x04)` 會在 S3 觸發喚醒。本機累計超過 200 次。
   修法：用 `SSDT-DISABLE-XDCI.aml` 幫它加一個回傳 0 的 `_STA`。原始 DSDT 中 XDCI **沒有** `_STA`（只有 `_ADR`/`_S0W`/`_PRW`/`_DSW`/`_DSM`），所以直接新增不會撞名，**不需要任何 ACPI rename patch**。注意路徑是 `PC00` 不是 `PCI0`。

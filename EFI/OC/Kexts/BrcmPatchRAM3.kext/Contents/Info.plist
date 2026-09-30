@@ -1372,7 +1372,7 @@
 			<key>DisplayName</key>
 			<string>Broadcom BCM2045A0 (0a5c:21ff)</string>
 			<key>FirmwareKey</key>
-			<string>BCM20703A1_001.001.005.0214.0422_v4518</string>
+			<string>BCM20703A1_001.001.005.0214.0481_v4577</string>
 			<key>IOClass</key>
 			<string>BrcmPatchRAM3</string>
 			<key>IOMatchCategory</key>
