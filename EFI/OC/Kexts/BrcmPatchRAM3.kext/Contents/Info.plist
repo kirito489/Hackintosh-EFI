@@ -1378,7 +1378,7 @@
 			<key>IOMatchCategory</key>
 			<string>BrcmPatchRAM3</string>
 			<key>IOProbeScore</key>
-			<integer>4000</integer>
+			<integer>7654</integer>
 			<key>IOProviderClass</key>
 			<string>IOUSBHostDevice</string>
 			<key>idProduct</key>
