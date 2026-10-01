@@ -7,8 +7,9 @@
 # suspend/resume 會讓 macOS 重讀 descriptor 而不 reset 卡（韌體保得住），
 # 裝置便以 05ac:8290 出現。USB reset 反而會清掉韌體，所以不能用 ReEnumerate。
 
-# 等 BrcmPatchRAM 寫完韌體（實測開機後約 4.4 秒完成）
-sleep 12
+# 等 BrcmPatchRAM 寫完韌體：實測三次都在開機後 4.4 秒完成（Processing time 1.79x 秒），
+# 這裡留約 1.6 秒邊際。調更短會有在韌體寫完前就睡的風險，韌體會白寫。
+sleep 6
 
 # 韌體已生效就不必睡 —— 保持 idempotent，也避免沒必要地打斷使用
 if ! /usr/sbin/ioreg -r -c IOUSBHostDevice -w0 | grep -q "0a5c:21ff"; then
@@ -16,8 +17,10 @@ if ! /usr/sbin/ioreg -r -c IOUSBHostDevice -w0 | grep -q "0a5c:21ff"; then
     exit 0
 fi
 
-# 排定喚醒再睡，不依賴主機板自己醒
-WAKE=$(/bin/date -v+25S '+%m/%d/%y %H:%M:%S')
+# 排定喚醒再睡，不依賴主機板自己醒。
+# sleepnow 到真的睡著約 2～3 秒、喚醒約 3～5 秒，12 秒足夠；
+# 太短會在還沒真正睡著時就被喚醒，USB 不會重新枚舉。
+WAKE=$(/bin/date -v+12S '+%m/%d/%y %H:%M:%S')
 /usr/bin/pmset schedule wake "$WAKE"
 echo "$(date '+%F %T') 排定 $WAKE 喚醒，現在進入睡眠"
 /usr/bin/pmset sleepnow
