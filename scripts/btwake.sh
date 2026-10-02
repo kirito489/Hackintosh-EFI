@@ -18,9 +18,10 @@ if ! /usr/sbin/ioreg -r -c IOUSBHostDevice -w0 | grep -q "0a5c:21ff"; then
 fi
 
 # 排定喚醒再睡，不依賴主機板自己醒。
-# sleepnow 到真的睡著約 2～3 秒、喚醒約 3～5 秒，12 秒足夠；
-# 太短會在還沒真正睡著時就被喚醒，USB 不會重新枚舉。
-WAKE=$(/bin/date -v+12S '+%m/%d/%y %H:%M:%S')
+# 25 秒是實測安全值：hibernatemode 3（safe sleep）要把 RAM 寫成 hibernation image，
+# 加上各 driver 的 SetState 延遲（AppleHDADriver 單獨就花 1 秒），整個睡眠流程需 13 秒以上。
+# 試過 12 秒：喚醒排程在睡眠流程未完成時就觸發，系統只進到 darkwake，USB 不會重新枚舉。
+WAKE=$(/bin/date -v+25S '+%m/%d/%y %H:%M:%S')
 /usr/bin/pmset schedule wake "$WAKE"
 echo "$(date '+%F %T') 排定 $WAKE 喚醒，現在進入睡眠"
 /usr/bin/pmset sleepnow
