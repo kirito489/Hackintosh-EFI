@@ -1674,7 +1674,7 @@
 				<key>SystemAudioVolume</key>
 				<data>Rg==</data>
 				<key>boot-args</key>
-				<string>keepsyms=1 agdpmod=pikera rtcfx_exclude=0E-FF brcmfx-country=US bpr_handshake=0</string>
+				<string>keepsyms=1 agdpmod=pikera rtcfx_exclude=0E-FF brcmfx-country=US</string>
 				<key>csr-active-config</key>
 				<data>AAAAAA==</data>
 				<key>prev-lang:kbd</key>
