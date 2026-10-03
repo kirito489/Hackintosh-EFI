@@ -4,8 +4,8 @@
 #
 # BrcmPatchRAM 結尾只發 HCI_RESET，本機這張卡不會因此自行重新枚舉，
 # 於是 USB descriptor 仍是 ROM 模式的 0a5c:21ff，macOS 看不到 HCI controller。
-# suspend/resume 會讓 macOS 重讀 descriptor 而不 reset 卡（韌體保得住），
-# 裝置便以 05ac:8290 出現。USB reset 反而會清掉韌體，所以不能用 ReEnumerate。
+# 系統睡眠喚醒後卡會以 05ac:8290 重新出現（韌體保得住）。USB 層的 reset、suspend、
+# ReEnumerate 都試過，卡仍回報 21ff，只有系統睡眠能觸發切換。
 
 # 等 BrcmPatchRAM 寫完韌體：實測三次都在開機後 4.4 秒完成（Processing time 1.79x 秒），
 # 這裡留約 1.6 秒邊際。調更短會有在韌體寫完前就睡的風險，韌體會白寫。

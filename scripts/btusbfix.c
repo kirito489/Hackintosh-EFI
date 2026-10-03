@@ -3,13 +3,14 @@
  *
  * BrcmPatchRAM 結尾只發 HCI_RESET，本機這張卡不會因此自行重新枚舉，USB
  * descriptor 仍是 ROM 模式的 0a5c:21ff，macOS 看不到 HCI controller。
- * 需要的是「讓 macOS 重讀 descriptor，但別讓卡斷電」。
+ * 這裡的假設是「讓 macOS 重讀 descriptor，但別讓卡斷電」—— 後來證實不成立：
+ * descriptor 重讀了卡仍回報 21ff，只有系統睡眠能讓它切換（見 藍牙韌體排查.md 第二節）。
  *
  *   suspend  USBDeviceSuspend(TRUE/FALSE) —— 模擬睡眠喚醒對裝置做的事
  *   reset    ResetDevice() —— 發 USB reset 訊號但不 power cycle
  *
- * 已知無效：USBDeviceReEnumerate 會對 port 做 power cycle，卡一斷電
- * RAM 裡的 patchram 韌體就沒了，裝置又以 21ff 出現。
+ * USBDeviceReEnumerate 一樣無效：韌體保得住（BrcmPatchRAM 回報 update not needed），
+ * 但裝置重新枚舉後仍是 21ff。
  *
  * 編譯：clang -O2 -Wall -o btusbfix btusbfix.c -framework IOKit -framework CoreFoundation
  */
